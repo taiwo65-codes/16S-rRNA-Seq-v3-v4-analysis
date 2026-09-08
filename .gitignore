@@ -1,0 +1,25 @@
+﻿# History and workspace files
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# Large sequencing data files (FASTQ)
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+filtered/
+trimmed/
+
+# Reference database archives (SILVA)
+silva_*.fa.gz
+*.tar.gz
+
+# Intermediate large binaries
+*.rds
+
+# System & OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini

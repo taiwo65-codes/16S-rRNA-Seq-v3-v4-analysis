@@ -1,4 +1,4 @@
-﻿# History and workspace files
+# History and workspace files
 .Rhistory
 .RData
 .Ruserdata
@@ -23,3 +23,6 @@ silva_*.fa.gz
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Sub-projects
+Corrplot codes/

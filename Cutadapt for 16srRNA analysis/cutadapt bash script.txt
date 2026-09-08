@@ -1,0 +1,86 @@
+# install conda
+(base) banko@Taiwo:~$ conda create -n cutadapt_env -c bioconda cutadapt -y
+
+# activate conda
+(base) banko@Taiwo:~$ conda activate cutadapt_env
+
+# navigate to the working directory, or you can click on the file on windows and click path to see the file path. 
+(cutadapt_env) banko@Taiwo:~$ cd "/mnt/c/Users/banko/Desktop/Li_lab/"
+
+# type in 'ls' to list the files in the wd
+(cutadapt_env) banko@Taiwo:/mnt/c/Users/banko/Desktop/Li_lab$ ls
+
+# now type in this loop to trim primers.
+ for R1 in *_R1_001.fastq.gz; do
+  # This skips any files we already trimmed (like your pos control)
+  if [[ "$R1" == trim_* ]]; then continue; fi
+
+  # This automatically finds the matching R2 file name
+  R2="${R1/_R1_/_R2_}"
+
+  echo "----------------------------------------"
+  echo "Working on sample: $R1"
+
+  cutadapt -g ^CCTAYGGGDBGCWGCAG -G ^GACTACNVGGGTMTCTAATCC \
+    --discard-untrimmed \
+    -o "trim_${R1}" \
+    -p "trim_${R2}" \
+    "$R1" "$R2"
+done
+echo "Trimming complete!"
+
+# your trimmed files will be in the wd
+
+# i also save script in my folder titled trim_16s.sh
+
+# Step 4: Make it executable
+''' Linux protects files from being run accidentally. You have to explicitly give this script permission to execute by running:
+'''
+
+Bash
+chmod +x trim_16s.sh
+
+'''
+How to use it next time: The next time you get a new batch of raw sequencing data, you just drop this script into the folder and type ./trim_16s.sh to run the whole thing automatically!
+'''
+
+________________________________________________________________________________________________________________________
+
+Yue CFI primer
+V3 (341F): CCTACGGGNGGCWGCAG
+V4 (806R): GGACTACNVGGGTWTCTAAT
+
+---------------------------------
+# Yue CFI bash script 4/27/26
+
+for R1 in *_R1.fastq*; do
+  # Skip any files already processed in previous runs
+  if [[ "$R1" == trim_* ]]; then continue; fi
+
+  # Extract the base sample name (e.g., CFI-10, Control-S5)
+  BASE="${R1%_R1.fastq*}"
+
+  # Identify the matching R2 file across mixed compression states
+  if [[ -f "${BASE}_R2.fastq.gz" ]]; then
+    R2="${BASE}_R2.fastq.gz"
+  elif [[ -f "${BASE}_R2.fastq" ]]; then
+    R2="${BASE}_R2.fastq"
+  else
+    echo "Warning: No R2 found for $R1. Skipping sample."
+    continue
+  fi
+
+  echo "----------------------------------------"
+  echo "Working on sample: $BASE"
+
+  # Removing the ^ anchor allows regular 5' trimming (strips primer + preceding indices)
+  # Outputting as .fastq.gz normalizes the output format
+  cutadapt -g CCTACGGGNGGCWGCAG -G GGACTACNVGGGTWTCTAAT \
+    --discard-untrimmed \
+    -o "trim_${BASE}_R1.fastq.gz" \
+    -p "trim_${BASE}_R2.fastq.gz" \
+    "$R1" "$R2"
+done
+
+echo "Trimming complete!"
+

@@ -1,15 +1,24 @@
 ﻿# 16S rRNA Amplicon Sequencing (V3–V4) Analysis Pipeline
 
 [![R](https://img.shields.io/badge/R-%E2%89%A54.0.0-blue.svg)](https://www.r-project.org/)
+[![Cutadapt](https://img.shields.io/badge/Pre--processing-Cutadapt-orange.svg)](https://cutadapt.readthedocs.io/)
 [![DADA2](https://img.shields.io/badge/Bioconductor-DADA2-2D728F.svg)](https://bioconductor.org/packages/release/bioc/html/dada2.html)
 [![Phyloseq](https://img.shields.io/badge/Bioconductor-Phyloseq-2D728F.svg)](https://bioconductor.org/packages/release/bioc/html/phyloseq.html)
 [![DESeq2](https://img.shields.io/badge/Bioconductor-DESeq2-2D728F.svg)](https://bioconductor.org/packages/release/bioc/html/DESeq2.html)
 [![Vegan](https://img.shields.io/badge/CRAN-vegan-green.svg)](https://cran.r-project.org/package=vegan)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An end-to-end, publication-grade bioinformatic and statistical workflow for high-throughput **16S rRNA gene amplicon sequencing (hypervariable regions V3–V4)** in R. 
+An end-to-end, publication-grade bioinformatic and statistical workflow for high-throughput **16S rRNA gene amplicon sequencing (hypervariable regions V3–V4)**. 
 
-This pipeline covers everything from raw Illumina paired-end demultiplexed reads to high-resolution Amplicon Sequence Variant (ASV) inference, taxonomic assignment against SILVA, microbial community ecology (alpha & beta diversity, PERMANOVA), relative taxonomic profiling, and negative binomial differential abundance analysis (DESeq2).
+This repository provides an automated, reproducible workflow spanning:
+1. **Raw Read Demultiplexing & Primer Trimming (Cutadapt)** to remove Illumina V3–V4 specific primers.
+2. **High-Resolution Denoising & ASV Inference (DADA2)** resolving exact biological sequence variants down to single-nucleotide differences.
+3. **Taxonomic Annotation (SILVA v138.2)** from Kingdom down to Genus and exact Species assignments.
+4. **Phyloseq Object Assembly & Contaminant Filtering** (removing host organelles and non-target taxa).
+5. **Alpha Diversity Ecology** (Observed, Chao1, Shannon, Simpson indices with Kruskal-Wallis & FDR-corrected Wilcoxon tests).
+6. **Beta Diversity & Community Structure** (Bray-Curtis dissimilarity, PCoA ordination with 95% confidence ellipses, and global/pairwise PERMANOVA via `adonis2`).
+7. **Relative Abundance Profiling** (automated multi-taxonomic rank aggregation and wide-format matrix generation).
+8. **Negative Binomial Differential Abundance Analysis (DESeq2)** using `poscounts` size-factor adjustments for sparse microbiome count data.
 
 ---
 
@@ -18,36 +27,37 @@ This pipeline covers everything from raw Illumina paired-end demultiplexed reads
 - [Overview & Experimental Context](#overview--experimental-context)
 - [Workflow Architecture](#workflow-architecture)
 - [Pipeline Stages & Technical Details](#pipeline-stages--technical-details)
-  - [1. Quality Control, Trimming, and Filtering](#1-quality-control-trimming-and-filtering)
-  - [2. Error Modeling & Sample Inference (DADA2)](#2-error-modeling--sample-inference-dada2)
-  - [3. Pair Merging, Length Validation, and Chimera Removal](#3-pair-merging-length-validation-and-chimera-removal)
-  - [4. Taxonomic Assignment (SILVA v138.2)](#4-taxonomic-assignment-silva-v1382)
-  - [5. Phyloseq Integration & Contaminant Filtering](#5-phyloseq-integration--contaminant-filtering)
-  - [6. Alpha Diversity Analysis](#6-alpha-diversity-analysis)
-  - [7. Beta Diversity & Multivariate Community Ecology](#7-beta-diversity--multivariate-community-ecology)
-  - [8. Taxonomic Composition & Abundance Export](#8-taxonomic-composition--abundance-export)
-  - [9. Differential Abundance Testing (DESeq2)](#9-differential-abundance-testing-deseq2)
+  - [Step 0: Primer Trimming (Cutadapt)](#step-0-primer-trimming-cutadapt)
+  - [Step 1: Quality Profiling & DADA2 Filter/Trim](#step-1-quality-profiling--dada2-filtertrim)
+  - [Step 2: Error Modeling & Sample Inference (DADA2)](#step-2-error-modeling--sample-inference-dada2)
+  - [Step 3: Pair Merging, Length Validation, and Chimera Removal](#step-3-pair-merging-length-validation-and-chimera-removal)
+  - [Step 4: Taxonomic Assignment (SILVA v138.2)](#step-4-taxonomic-assignment-silva-v1382)
+  - [Step 5: Phyloseq Integration & Contaminant Filtering](#step-5-phyloseq-integration--contaminant-filtering)
+  - [Step 6: Alpha Diversity Analysis](#step-6-alpha-diversity-analysis)
+  - [Step 7: Beta Diversity & Multivariate Community Ecology](#step-7-beta-diversity--multivariate-community-ecology)
+  - [Step 8: Taxonomic Composition & Abundance Export](#step-8-taxonomic-composition--abundance-export)
+  - [Step 9: Differential Abundance Testing (DESeq2)](#step-9-differential-abundance-testing-deseq2)
 - [Repository Structure](#repository-structure)
 - [Installation & Prerequisites](#installation--prerequisites)
 - [Input Data Requirements](#input-data-requirements)
 - [Usage Guide](#usage-guide)
 - [Expected Outputs & Deliverables](#expected-outputs--deliverables)
-- [Author & Acknowledgments](#author--acknowledgments)
+- [Author & Citation Information](#author--citation-information)
 - [License](#license)
 
 ---
 
 ## Overview & Experimental Context
 
-Amplicon sequencing of the 16S ribosomal RNA hypervariable regions **V3–V4** is a gold standard for profiling bacterial communities in complex environments. Unlike traditional 97% OTU clustering methods that obscure fine-scale variation, this workflow employs **DADA2** to resolve exact **Amplicon Sequence Variants (ASVs)** down to single-nucleotide differences.
+Amplicon sequencing of the 16S ribosomal RNA hypervariable regions **V3–V4** is a cornerstone for profiling bacterial communities in environmental and biomedical ecosystems. Unlike traditional 97% OTU clustering methods that bin distinct bacterial strains together, this pipeline employs **DADA2** to infer exact **Amplicon Sequence Variants (ASVs)**.
 
 ### Experimental Study Design (CFI Study)
 The pipeline is demonstrated on a gut microbiome dataset investigating the physiological and microbiome-modulating effects of a dietary intervention (**CFI** / Caffeine intervention) in mouse models under standard and high-fat diet conditions:
 - **Control**: Baseline standard diet controls.
 - **Control-CFI**: Healthy controls receiving dietary intervention (identifying baseline intervention effects).
-- **HFD**: High-Fat Diet-induced dysbiosis model.
+- **HFD**: High-Fat Diet-induced obesity and dysbiosis model.
 - **HFD-CFI**: High-Fat Diet mice receiving dietary intervention (evaluating microbiome rescue / therapeutic effects).
-- **Negative & Positive Controls**: Sequencing/extraction controls filtered out prior to biological evaluations.
+- **Negative & Positive Controls**: Sequencing and extraction controls used for quality auditing, subsequently filtered out prior to biological evaluations.
 
 ---
 
@@ -55,96 +65,102 @@ The pipeline is demonstrated on a gut microbiome dataset investigating the physi
 
 ```mermaid
 flowchart TD
-    A[Raw Paired-End FASTQ<br/>R1 / R2 V3-V4 Reads] --> B[Quality Profiling<br/>plotQualityProfile]
-    B --> C[Filtering & Trimming<br/>filterAndTrim: 240bp / 230bp, maxEE=2]
-    C --> D[Parametric Error Learning<br/>learnErrors ML Model]
-    D --> E[Sample Inference & Denoising<br/>dada algorithm]
-    E --> F[Paired-End Merging<br/>mergePairs: 12bp min overlap]
-    F --> G[ASV Table Construction<br/>makeSequenceTable]
-    G --> H[V3-V4 Length Filtering<br/>399 bp to 430 bp]
-    H --> I[Bimera / Chimera Removal<br/>removeBimeraDenovo: consensus]
-    I --> J[Taxonomic Classification<br/>SILVA v138.2 to Genus & Species]
-    J --> K[Phyloseq Object Assembly<br/>seqtab + taxa + metadata]
-    K --> L[Contaminant Filtering<br/>Remove Mitochondria, Chloroplast, Controls]
+    A[Raw Paired-End FASTQ<br/>R1 / R2 V3-V4 Reads] --> B[Cutadapt Primer Trimming<br/>Forward 341F & Reverse 806R]
+    B --> C[Quality Profiling<br/>plotQualityProfile]
+    C --> D[Filtering & Trimming<br/>filterAndTrim: 240bp / 230bp, maxEE=2]
+    D --> E[Parametric Error Learning<br/>learnErrors ML Model]
+    E --> F[Sample Inference & Denoising<br/>dada algorithm]
+    F --> G[Paired-End Merging<br/>mergePairs: 12bp min overlap]
+    G --> H[ASV Table Construction<br/>makeSequenceTable]
+    H --> I[V3-V4 Length Filtering<br/>399 bp to 430 bp]
+    I --> J[Bimera / Chimera Removal<br/>removeBimeraDenovo: consensus]
+    J --> K[Taxonomic Classification<br/>SILVA v138.2 to Genus & Species]
+    K --> L[Phyloseq Object Assembly<br/>seqtab + taxa + metadata]
+    L --> M[Contaminant Filtering<br/>Remove Mitochondria, Chloroplast, Controls]
     
-    L --> M[Alpha Diversity<br/>Observed, Chao1, Shannon, Simpson<br/>Kruskal-Wallis & Wilcoxon FDR]
-    L --> N[Beta Diversity<br/>Bray-Curtis PCoA + 95% Ellipses<br/>Global & Pairwise PERMANOVA]
-    L --> O[Taxonomic Composition<br/>Relative Abundance Stacked Bars<br/>Phylum to Species Wide Matrix Export]
-    L --> P[Differential Abundance<br/>DESeq2 poscounts + Local GLM<br/>HFD-CFI vs HFD | Control vs CFI]
+    M --> N[Alpha Diversity<br/>Observed, Chao1, Shannon, Simpson<br/>Kruskal-Wallis & Wilcoxon FDR]
+    M --> O[Beta Diversity<br/>Bray-Curtis PCoA + 95% Ellipses<br/>Global & Pairwise PERMANOVA]
+    M --> P[Taxonomic Composition<br/>Relative Abundance Stacked Bars<br/>Phylum to Species Wide Matrix Export]
+    M --> Q[Differential Abundance<br/>DESeq2 poscounts + Local GLM<br/>HFD-CFI vs HFD | Control vs CFI]
 ```
 
 ---
 
 ## Pipeline Stages & Technical Details
 
-### 1. Quality Control, Trimming, and Filtering
-- Inspects per-base quality profiles for forward and reverse read pools (`plotQualityProfile`).
-- Executes `filterAndTrim` with optimized cutoffs for V3–V4 amplicon sequencing:
-  - Forward truncation: `truncLen = 240` bp.
-  - Reverse truncation: `truncLen = 230` bp (accounting for lower reverse read quality).
-  - Maximum expected errors: `maxEE = c(2, 2)`.
-  - Quality score threshold: `truncQ = 2`.
-  - PhiX spike-in removal: `rm.phix = TRUE`.
+### Step 0: Primer Trimming (Cutadapt)
+Located in `Cutadapt for 16srRNA analysis/`:
+- Raw Illumina sequencing reads contain non-biological primers targeting the V3–V4 region:
+  - **Forward (341F)**: `CCTACGGGNGGCWGCAG` (or `^CCTAYGGGDBGCWGCAG`)
+  - **Reverse (806R)**: `GGACTACNVGGGTWTCTAAT` (or `^GACTACNVGGGTMTCTAATCC`)
+- Uses `cutadapt` to strip primers, discarding untrimmed reads (`--discard-untrimmed`) and prefixing output with `trim_`.
 
-### 2. Error Modeling & Sample Inference (DADA2)
-- Trains parametric error models on filtered reads (`learnErrors`) to differentiate true biological sequence variants from Illumina sequencing errors.
-- Infers true sample sequences (`dada`) with exact single-nucleotide resolution.
+### Step 1: Quality Profiling & DADA2 Filter/Trim
+- Inspects per-base quality scores (`plotQualityProfile`) across cycles.
+- Runs `filterAndTrim` with optimized cutoffs for V3–V4 amplicons:
+  - `truncLen = c(240, 230)` (maintains sufficient overlap for merging while clipping degraded 3' tail ends).
+  - `maxEE = c(2, 2)` (maximum allowed expected errors).
+  - `truncQ = 2` (truncates reads at the first instance of low-quality scores).
+  - `rm.phix = TRUE` (removes Illumina PhiX spike-in).
 
-### 3. Pair Merging, Length Validation, and Chimera Removal
-- Merges forward and reverse denoised reads (`mergePairs`).
-- Constructs the full Amplicon Sequence Variant (ASV) abundance table.
-- Applies strict biological length filtering (`399:430 bp`), removing non-specific amplification products.
+### Step 2: Error Modeling & Sample Inference (DADA2)
+- Learns the run-specific error rates using machine-learning parametric models (`learnErrors`, `plotErrors`).
+- Applies sample inference (`dada`) with single-nucleotide resolution to distinguish real biological variants from sequencer miscalls.
+
+### Step 3: Pair Merging, Length Validation, and Chimera Removal
+- Merges forward and reverse denoised pairs (`mergePairs`).
+- Assembles the initial Amplicon Sequence Variant (ASV) count table (`makeSequenceTable`).
+- Enforces strict biological amplicon length bounds (`399:430 bp`), discarding non-specific PCR artifacts.
 - Identifies and discards PCR chimeras de novo (`removeBimeraDenovo`, `method = "consensus"`).
-- Tracks read retention metrics across each step of the pipeline (`track`).
+- Tracks read progression and survival percentage across all stages (`track`).
 
-### 4. Taxonomic Assignment (SILVA v138.2)
-- Assigns bacterial taxonomy from Kingdom down to Genus using the SILVA v138.2 reference training set (`assignTaxonomy`, RDP naive Bayesian classifier).
-- Assigns exact species matches using the SILVA species assignment database (`addSpecies`).
+### Step 4: Taxonomic Assignment (SILVA v138.2)
+- Classifies ASVs from Kingdom down to Genus via the SILVA v138.2 training set (`assignTaxonomy`, RDP naive Bayesian classifier).
+- Assigns exact binomial species names where available (`addSpecies`).
 
-### 5. Phyloseq Integration & Contaminant Filtering
-- Combines the ASV count matrix, sample metadata (`CFI metadata.csv`), and taxonomy table into a unified `phyloseq` object.
+### Step 5: Phyloseq Integration & Contaminant Filtering
+- Consolidates the ASV count matrix, sample metadata (`CFI metadata.csv`), and taxonomy table into a unified `phyloseq` object.
 - Filters out non-bacterial or organellar DNA:
   - Excludes Family **Mitochondria**.
   - Excludes Order **Chloroplast**.
-  - Removes unassigned phyla.
-- Segregates experimental animals from sequencing control samples (`ps.mice`).
+  - Excludes unassigned phyla.
+- Subsets experimental animals away from sequencing controls (`ps.mice`).
 
-### 6. Alpha Diversity Analysis
-- Calculates richness and evenness estimators:
-  - **Observed ASVs** (direct richness)
-  - **Chao1** (abundance-based richness estimator)
-  - **Shannon Index** (richness & evenness)
-  - **Simpson Index** (dominance & evenness)
-- Visualizes distributions via publication-ready boxplots with `ggplot2`.
-- Performs rigorous non-parametric hypothesis testing:
-  - **Kruskal-Wallis test** across experimental groups.
-  - **Pairwise Wilcoxon rank-sum tests** with Benjamini-Hochberg (BH/FDR) $p$-value adjustment.
+### Step 6: Alpha Diversity Analysis
+- Computes within-sample richness and diversity indices:
+  - **Observed ASVs** (total richness)
+  - **Chao1** (richness adjusted for undetected rare taxa)
+  - **Shannon Index** (accounts for richness and evenness)
+  - **Simpson Index** (measures dominance)
+- Generates publication-ready boxplots faceted by treatment group (`ggplot2`).
+- Computes non-parametric statistical metrics:
+  - Global **Kruskal-Wallis** test across all groups.
+  - Post-hoc pairwise **Wilcoxon rank-sum tests** with Benjamini-Hochberg (BH/FDR) correction.
 
-### 7. Beta Diversity & Multivariate Community Ecology
-- **Quality noise pruning**: Prunes rare ASVs (< 10 reads total across experiment) and low-prevalence artifacts (present in < 2 samples).
-- **Ordination**: Computes Bray-Curtis dissimilarity distance matrices and performs Principal Coordinates Analysis (PCoA).
-- Generates 2D PCoA ordination plots overlaid with 95% confidence multivariate normal ellipses (`stat_ellipse(type = "t")`).
-- **Hypothesis Testing**:
-  - Global **PERMANOVA** (`vegan::adonis2`, 999 permutations) testing community structure divergence across treatment groups.
-  - **Pairwise PERMANOVA** comparisons:
-    - `Control vs Control-CFI` ($p = 0.032$): Identifies the direct microbial modulation triggered by CFI in healthy hosts.
-    - `HFD vs HFD-CFI` ($p = 0.040$): Evaluates the therapeutic capacity of CFI to rescue or remodel HFD-induced dysbiosis.
+### Step 7: Beta Diversity & Multivariate Community Ecology
+- **Noise reduction**: Filters out ultra-low abundance ASVs (< 10 reads overall) and enforces prevalence in $\ge 2$ samples.
+- Computes Bray-Curtis dissimilarity distance matrices and performs Principal Coordinates Analysis (PCoA).
+- Produces PCoA scatter plots with 95% confidence multivariate ellipses (`stat_ellipse(type = "t")`).
+- Performs hypothesis testing:
+  - Global **PERMANOVA** (`vegan::adonis2`, 999 permutations).
+  - Pairwise PERMANOVA tests:
+    - `Control vs Control-CFI` ($p = 0.032$): Quantifies baseline microbiota shifts induced by the intervention.
+    - `HFD vs HFD-CFI` ($p = 0.040$): Evaluates therapeutic restructuring in diet-induced dysbiosis.
 
-### 8. Taxonomic Composition & Abundance Export
-- Computes relative abundance transformations via Total Sum Scaling (TSS).
-- Agglomerates taxa at each canonical rank (`tax_glom`): **Phylum, Class, Order, Family, Genus, Species**.
-- Generates faceted stacked bar plots (`ggplot2` + `facet_grid(~Group)`).
-- Implements an automated custom export function (`export_wide_taxonomy`) generating tidy wide-format abundance matrices with sample metadata for all taxonomic ranks.
+### Step 8: Taxonomic Composition & Abundance Export
+- Applies Total Sum Scaling (TSS) transformation to calculate relative abundances.
+- Agglomerates taxa at each canonical rank (`tax_glom`): Phylum, Class, Order, Family, Genus, Species.
+- Builds faceted stacked bar plots (`facet_grid(~Group)`).
+- Implements an automated export routine (`export_wide_taxonomy`) generating tidy wide-format abundance tables with metadata for downstream manuscript generation.
 
-### 9. Differential Abundance Testing (DESeq2)
-- Converts raw counts to DESeq2 format (`phyloseq_to_deseq2`).
-- Implements `poscounts` size factor estimation, specifically formulated to handle sparsity and zero-inflation in microbiome count data.
-- Fits generalized linear models (GLMs) using local dispersion estimation (`fitType = "local"`).
-- Tests key biological contrasts:
-  1. `HFD-CFI vs HFD`: Discovers specific bacterial biomarkers shifted or restored by the intervention.
-  2. `Control-CFI vs Control`: Quantifies changes elicited in normal physiological status.
-  3. `HFD vs Control-CFI`: Evaluates distance between disease state and healthy intervention state.
-- Annotates statistically significant taxa ($\text{padj} < 0.05$) with full SILVA taxonomy and orders by $\log_2(\text{Fold Change})$.
+### Step 9: Differential Abundance Testing (DESeq2)
+- Converts raw counts to a DESeq2 dataset (`phyloseq_to_deseq2`).
+- Applies `poscounts` size factor estimation specifically tailored for sparse 16S amplicon data.
+- Fits generalized linear models (GLMs) using local dispersion estimates (`fitType = "local"`).
+- Extracts and annotates statistically significant biomarkers ($\text{padj} < 0.05$) sorted by $\log_2(\text{Fold Change})$ across:
+  - `HFD-CFI vs HFD`
+  - `Control-CFI vs Control`
+  - `HFD vs Control-CFI`
 
 ---
 
@@ -153,35 +169,40 @@ flowchart TD
 ```text
 16S-rRNA-Seq-v3-v4-analysis/
 ├── 16S rRNA V3-V4 R codes/
-│   └── CFI 16s data analysis.R      # Primary R analysis script (DADA2 to DESeq2)
-├── .gitignore                       # Ignored cache, FASTQ, and large binaries
-├── LICENSE                          # MIT License
-└── README.md                        # Complete project documentation & workflow guide
+│   └── CFI 16s data analysis.R          # Comprehensive R script (DADA2, Phyloseq, DESeq2)
+├── Cutadapt for 16srRNA analysis/
+│   ├── cutadapt bash script.txt          # Reference bash commands and notes
+│   └── trim_16s.sh                       # Executable shell script for batch primer trimming
+├── .gitignore                           # Excludes FASTQ, raw databases, and session caches
+├── LICENSE                              # MIT License
+└── README.md                            # Comprehensive workflow and project documentation
 ```
 
 ---
 
 ## Installation & Prerequisites
 
-### R Environment
-Recommended: **R >= 4.0.0** (tested on R 4.2+ / 4.3+).
+### 1. Conda Environment for Cutadapt
+```bash
+conda create -n cutadapt_env -c bioconda cutadapt -y
+conda activate cutadapt_env
+```
 
-### Required R Packages
-
+### 2. R Environment (R >= 4.0.0)
 ```r
-# 1. Install BiocManager if not already installed
+# Install BiocManager if not already present
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
-# 2. Install core Bioconductor packages
+# Install core Bioconductor packages
 BiocManager::install(c("dada2", "phyloseq", "DESeq2"))
 
-# 3. Install CRAN packages
+# Install CRAN packages
 install.packages(c("ggplot2", "dplyr", "tidyr", "vegan"))
 ```
 
-### Reference Databases
-Download the SILVA reference database files and place them in your analysis working directory:
+### 3. SILVA Reference Databases
+Download the SILVA v138.2 reference training datasets and place them in your working directory:
 - [silva_nr99_v138.2_toGenus_trainset.fa.gz](https://zenodo.org/records/10700595)
 - [silva_v138.2_assignSpecies.fa.gz](https://zenodo.org/records/10700595)
 
@@ -193,30 +214,30 @@ Download the SILVA reference database files and place them in your analysis work
    - Forward reads: `<sample_id>_R1_001.fastq.gz`
    - Reverse reads: `<sample_id>_R2_001.fastq.gz`
 2. **Sample Metadata File (`CFI metadata.csv`)**:
-   - A CSV spreadsheet whose row names correspond exactly to the sample identifiers extracted from FASTQ filenames.
-   - Recommended columns:
-     - `Sample`: Unique identifier.
-     - `Name`: Formatted display name for visualizations.
-     - `Group`: Treatment group assignment (`Control`, `Control-CFI`, `HFD`, `HFD-CFI`, `Negative`, `Positive`).
+   - Sample row names matching FASTQ sample IDs.
+   - Key columns: `Sample`, `Name`, `Group` (`Control`, `Control-CFI`, `HFD`, `HFD-CFI`, `Negative`, `Positive`).
 
 ---
 
 ## Usage Guide
 
-1. Clone or download this repository:
+1. **Clone the repository**:
    ```bash
    git clone https://github.com/taiwo65-codes/16S-rRNA-Seq-v3-v4-analysis.git
    cd 16S-rRNA-Seq-v3-v4-analysis
    ```
 
-2. Open `16S rRNA V3-V4 R codes/CFI 16s data analysis.R` in RStudio or an R session.
-
-3. Update the working path at the top of the script:
-   ```r
-   path <- "path/to/your/fastq_and_metadata_directory"
+2. **Trim primers**:
+   ```bash
+   cd "Cutadapt for 16srRNA analysis"
+   bash trim_16s.sh
+   cd ..
    ```
 
-4. Run the script interactively or sequentially by section to inspect diagnostic quality plots and verify intermediate outputs.
+3. **Run R analysis**:
+   - Open `16S rRNA V3-V4 R codes/CFI 16s data analysis.R` in RStudio.
+   - Adjust `path <- "/path/to/your/files"` to your data directory.
+   - Run sections sequentially.
 
 ---
 
@@ -224,7 +245,8 @@ Download the SILVA reference database files and place them in your analysis work
 
 | Category | File Name | Description |
 | :--- | :--- | :--- |
-| **DADA2 Intermediates** | `seqtab_dada2_raw.rds` | Cleaned ASV count abundance matrix |
+| **Trimmed Reads** | `trim_*_R1_001.fastq.gz` | Primer-trimmed FASTQ paired-end reads |
+| **DADA2 Counts** | `seqtab_dada2_raw.rds` | Cleaned ASV count abundance matrix |
 | **Taxonomy Table** | `taxa_dada2_raw.rds` | SILVA v138.2 taxonomic classifications |
 | **Alpha Diversity** | `alpha_diversities_complete.csv` | Observed, Chao1, Shannon, Simpson indices per sample |
 | **Taxonomic Profiles** | `phylum_rel_abundance_wide.csv` | Wide-format relative abundance across samples at Phylum level |
@@ -235,7 +257,7 @@ Download the SILVA reference database files and place them in your analysis work
 
 ---
 
-## Author & Acknowledgments
+## Author & Citation Information
 
 - **Author**: **Taiwo Bankole**
 - **GitHub**: [@taiwo65-codes](https://github.com/taiwo65-codes)

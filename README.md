@@ -1,4 +1,4 @@
-﻿# 16S rRNA Amplicon Sequencing (V3–V4) Analysis Pipeline
+# 16S rRNA Amplicon Sequencing (V3–V4) Analysis Pipeline
 
 [![R](https://img.shields.io/badge/R-%E2%89%A54.0.0-blue.svg)](https://www.r-project.org/)
 [![Cutadapt](https://img.shields.io/badge/Pre--processing-Cutadapt-orange.svg)](https://cutadapt.readthedocs.io/)
@@ -65,23 +65,23 @@ The pipeline is demonstrated on a gut microbiome dataset investigating the physi
 
 ```mermaid
 flowchart TD
-    A[Raw Paired-End FASTQ<br/>R1 / R2 V3-V4 Reads] --> B[Cutadapt Primer Trimming<br/>Forward 341F & Reverse 806R]
-    B --> C[Quality Profiling<br/>plotQualityProfile]
-    C --> D[Filtering & Trimming<br/>filterAndTrim: 240bp / 230bp, maxEE=2]
-    D --> E[Parametric Error Learning<br/>learnErrors ML Model]
-    E --> F[Sample Inference & Denoising<br/>dada algorithm]
-    F --> G[Paired-End Merging<br/>mergePairs: 12bp min overlap]
-    G --> H[ASV Table Construction<br/>makeSequenceTable]
-    H --> I[V3-V4 Length Filtering<br/>399 bp to 430 bp]
-    I --> J[Bimera / Chimera Removal<br/>removeBimeraDenovo: consensus]
-    J --> K[Taxonomic Classification<br/>SILVA v138.2 to Genus & Species]
-    K --> L[Phyloseq Object Assembly<br/>seqtab + taxa + metadata]
-    L --> M[Contaminant Filtering<br/>Remove Mitochondria, Chloroplast, Controls]
+    A["Raw Paired-End FASTQ<br/>R1 / R2 V3-V4 Reads"] --> B["Cutadapt Primer Trimming<br/>Forward 341F & Reverse 806R"]
+    B --> C["Quality Profiling<br/>plotQualityProfile"]
+    C --> D["Filtering & Trimming<br/>filterAndTrim: 240bp / 230bp, maxEE=2"]
+    D --> E["Parametric Error Learning<br/>learnErrors ML Model"]
+    E --> F["Sample Inference & Denoising<br/>dada algorithm"]
+    F --> G["Paired-End Merging<br/>mergePairs: 12bp min overlap"]
+    G --> H["ASV Table Construction<br/>makeSequenceTable"]
+    H --> I["V3-V4 Length Filtering<br/>399 bp to 430 bp"]
+    I --> J["Bimera / Chimera Removal<br/>removeBimeraDenovo: consensus"]
+    J --> K["Taxonomic Classification<br/>SILVA v138.2 to Genus & Species"]
+    K --> L["Phyloseq Object Assembly<br/>seqtab + taxa + metadata"]
+    L --> M["Contaminant Filtering<br/>Remove Mitochondria, Chloroplast, Controls"]
     
-    M --> N[Alpha Diversity<br/>Observed, Chao1, Shannon, Simpson<br/>Kruskal-Wallis & Wilcoxon FDR]
-    M --> O[Beta Diversity<br/>Bray-Curtis PCoA + 95% Ellipses<br/>Global & Pairwise PERMANOVA]
-    M --> P[Taxonomic Composition<br/>Relative Abundance Stacked Bars<br/>Phylum to Species Wide Matrix Export]
-    M --> Q[Differential Abundance<br/>DESeq2 poscounts + Local GLM<br/>HFD-CFI vs HFD | Control vs CFI]
+    M --> N["Alpha Diversity<br/>Observed, Chao1, Shannon, Simpson<br/>Kruskal-Wallis & Wilcoxon FDR"]
+    M --> O["Beta Diversity<br/>Bray-Curtis PCoA + 95% Ellipses<br/>Global & Pairwise PERMANOVA"]
+    M --> P["Taxonomic Composition<br/>Relative Abundance Stacked Bars<br/>Phylum to Species Wide Matrix Export"]
+    M --> Q["Differential Abundance<br/>DESeq2 poscounts + Local GLM<br/>HFD-CFI vs HFD & Control vs CFI"]
 ```
 
 ---
